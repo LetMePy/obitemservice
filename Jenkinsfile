@@ -1,13 +1,36 @@
-
-/* Requires the Docker Pipeline plugin */
 pipeline {
-    agent { docker { image 'maven:3.9.5-eclipse-temurin-17-alpine' } }
+    environment {
+        registry = "skandersoltane/simple-app"
+        registryCredential = 'dckr_pat_iTj37v7dE4n0_IG1vzZySi33EY8'
+        dockerImage = 'simple-app'
+    }
+    agent any
     stages {
-        stage('build') {
+        stage('Cloning our Git') {
             steps {
-                sh 'mvn --version'
+                git 'https://github.com/LetMePy/obitemservice.git'
+            }
+        }
+        stage('Building our image') {
+            steps {
+                script {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
+            }
+        }
+        stage('Deploy our image') {
+            steps {
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }
+        stage('Cleaning up') {
+            steps {
+                sh "docker rmi $registry:$BUILD_NUMBER"
             }
         }
     }
 }
-
